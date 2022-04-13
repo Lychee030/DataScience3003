@@ -1,0 +1,250 @@
+---
+title: "Midterm - Who Is More Likely to Have Social Anxiety Disorder?"
+author: "Emily Feng (ejf9kwf)"
+date: "Presentation Date: Feb 28"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+  pdf_document:
+    toc: yes
+---
+
+<style>
+h1.title {
+  font-size: 30px;
+  font-family: "Times New Roman", Times, serif;
+}
+h1 {
+    color: blue;
+    margin-top: 100px;
+    font-family: "Times New Roman", Times, serif;
+    color: DarkRed;
+    text-align: center;
+    padding-top: 100;
+}
+h2 {
+    margin-top: 50px;
+    font-size: 22px;
+}
+h3 { 
+    font-size: 18px;
+}
+h4.author { 
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: DarkRed;
+    text-align: center;
+}
+h4.date { 
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: DarkRed;
+    text-align: center;
+}
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 14px;
+    border-left: 5px solid #eee;
+}
+</style>
+
+# Article
+![](article_image.png)
+
+[Link to the article: "How Anxiety Affects Men and Women Differently" from *texashealth.org*](https://www.texashealth.org/Health-and-Wellness/Behavioral-Health/How-Anxiety-Affects-Men-and-Women-Differently)
+
+> The National Institutes of Health defines generalized anxiety disorder as excessive worry or anxiety about normal daily life, occurring more days than not, for a period of six months or more. With little ability to control their overwhelming fears, people may see the negative effects of anxiety trickle down to their relationships, health, school and/or work performance, and feelings of overall well-being.
+
+Nowadays, generalized anxiety disorder is prevalent among adults as it affects roughly 2.7% of American adults in 2020. Symptoms of anxiety disorders include sweating, feeling weakness, difficulty breathing while facing other people. Based on statistics, it is found that social anxiety disorder may occur at any time throughout one's life. Life experience, family issues, and time spent on social media can all be potential causes of developing social anxiety disorder. Even though different people react to the same mental disorder in different ways, the chosen article focuses more on the gender difference in anxiety disorders. Findings show that women have a higher rate of experiencing all anxiety disorders than men. Approximately 23.4% of women who visit doctors are considered having anxiety disorders; whereas, only about 14.3% of men are diagnosed. In addition, evidence shows that teenage girls are also more likely to experience mental disabilities. However, unlike all other anxiety disorders, social anxiety disorder occurs at the same rate for both males and females. People with social anxiety disorder usually avoid social events as opposed to taking medicines as a treatment. 
+
+**For my project, I would like to analyze who is more likely to experience social anxiety disorder. In the following sections, I will examine gender and age range differences in anxiety disorders. Furthermore, with decreased face-to-face interactions during the COVID pandemic, I am interested in finding out the correlation between time spent on social media and the possibility of having social anxiety disorder.**
+
+# Data {.tabset}
+
+["Student Social Anxiety Survey" from *Kaggle*](https://www.kaggle.com/carlsonhoo/university-social-anxiety-survey)
+
+The chosen dataset contains 66 samples with 12 variables for each sample. The method for collecting samples is survey sampling method. A survey, which was conducted using Google form, was sent to multiple locations with a high proportion of college students. Additionally, all participants responded to this survey voluntarily. For each participant, basic information such as *time when survey was completed*, *age range*, *gender*, *marital status*, and *daily time spent on social media* were recorded. Moreover, each participant was asked to select an answer from 1 (very comfortable) to 5 (very uncomfortable) for seven questions (including one question asking daily time spent on social media) listed in the table below. This dataset is relevant to the article because it not only includes gender and age factors on anxiety disorder that was discussed in the article, but also contains other factors like time spent on social media that attracts my interests.
+
+## First 6 Rows of the Dataset
+
+```{r}
+SAD <- read.csv(file = 'Social_Anxiety_Survey_Master.csv')
+knitr::kable(head(SAD))
+```
+
+
+## Survey Questions
+```{r}
+questions = c("Q1: How many hours per day do you spend on social media?",
+                "Q2: How do you feel being the center of attention?",
+                "Q3: Working while being observed?",
+                "Q4: Talking face to face with someone you don't know very well?",
+                "Q5: Expressing disagreement or disapproval to someone you don't know very well",
+                "Q6: Are you extremely conscious of your actions when in social settings because you fear they might offend someone or you could be rejected?",
+                "Q7: Do you feel anxious or panicky before social situations?")
+questions
+
+```
+
+## Full Dataset
+```{r, fig.height = 20, fig.width = 10}
+library(DT)
+datatable(SAD, class = 'cell-border stripe', options = list(scrollX = TRUE)) 
+```
+
+## Summary of the Dataset
+```{r}
+summary(SAD)
+```
+
+# Revised Dataset
+To help further analysis, I would like to find the total anxiety score for each observation by summing up selected answers from question 2 to question 7. Then, I will rename Q1 with "Daily Time Spent on Social Media" to reduce confusion. 
+"Total Anxiety Score" must be in range from 6 to 30. Having a score of 6 means the corresponding person answered 1 (very comfortable) to all questions. In contrast, getting a score of 30 means that a person answered 5 (very uncomfortable) to all questions.
+```{r, message = FALSE}
+library(tidyverse)
+revisedSAD <- SAD %>% 
+  rowwise() %>%
+  mutate(Q_total = Q2 + Q3 + Q4 + Q5 + Q6 + Q7)
+revisedSAD <- subset (revisedSAD, select = -c(7:12))
+colnames(revisedSAD) <- c("Timestamp", "Gender", "Student", "Age", "Marital", "Daily Time Spent on Social Media", "Total Anxiety Score")
+knitr::kable(head(revisedSAD))
+```
+
+
+# Data Validation{.tabset}
+
+## Data Type
+
+```{r class.source = 'fold-show', eval = FALSE}
+typeof(revisedSAD$Timestamp)
+typeof(revisedSAD$Gender)
+typeof(revisedSAD$Student)
+typeof(revisedSAD$Age)
+typeof(revisedSAD$Marital)
+typeof(revisedSAD$`Daily Time Spent on Social Media`)
+typeof(revisedSAD$`Total Anxiety Score`)
+```
+Data types are correct. The data type of *Total Anxiety Score* is **integer**. All other variables have **character** as their data type.
+
+## Valid Range
+```{r}
+summary(revisedSAD$`Total Anxiety Score`)
+```
+An anxiety score must be within the range from 6 to 30 inclusive. Based on the summary of *Total Anxiety Score*, both of the minimum score (13.00) and the maximum score (30.00) are within the range.
+
+## Duplicates
+```{r class.source = 'fold-show', eval = FALSE}
+unique(revisedSAD)
+```
+There are no duplicates in the dataset. Each observation is unique.
+
+## Null Value
+```{r class.source = 'fold-show', eval = FALSE}
+is.na(revisedSAD) # Check for na
+is.infinite(revisedSAD$`Total Anxiety Score`) # Check for infinity
+'NaN' %in% revisedSAD # Check for NaN
+'' %in% revisedSAD # Check for empty string
+```
+There are no null values or inconsistent values (NaN, infinity, empty strings, etc.) in the dataset.
+
+    
+# Plots
+
+## Gender
+```{r, fig.height = 4, fig.width = 10, message=FALSE}
+library(gridExtra)
+SAD_withMeanScores <- revisedSAD %>% group_by(Gender) %>% summarise(meanScore = mean(`Total Anxiety Score`))
+
+bargraph <- 
+  ggplot(SAD_withMeanScores, aes(x = Gender, y = meanScore, fill = Gender)) +
+  geom_col() + 
+  labs(x = "Gender", y = "Anxiety Score", title = "Anxiety Scores by Gender") +
+  geom_text(aes(label = round(meanScore,2)), vjust = -1) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "none") +
+  scale_y_continuous(limits = c(0,30))
+
+boxplot <- 
+  ggplot(revisedSAD, aes(x = `Total Anxiety Score`, y=Gender, fill = Gender)) +
+  geom_boxplot(color="red", outlier.colour = "red", outlier.shape = 22) +
+  theme_gray() +
+  geom_jitter(color="black", alpha=0.9) +
+  coord_flip() +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "none") +
+  labs(x = "Anxiety Score", y='Gender', title = "The Correlation Between Anxiety Scores and Gender") 
+
+grid.arrange(bargraph, boxplot, ncol=2)
+```
+By using a bar graph to compare their mean, it is found that females have a mean social anxiety score of 20.62, and males have a mean score of 20.74. Their mean scores are similar. \
+A box plot is created in order to make sure that the mean is appropriate to represent the center of the distribution. Based on the plot, neither males nor females have strongly skewed distributions. However, the min and the max score of male’s are fall between female’s, excluding an outlier. Also, male participants have a much smaller range between min value to the first quartile. Therefore, Male participants in the first quartile may have a higher average social anxiety score than female participants in the first quartile. But, overall, there is no obvious difference between males and females average total anxiety score.
+
+
+### Gender and Marital Status
+```{r}
+ggplot(revisedSAD, aes(x = `Total Anxiety Score`, y=Gender, fill=Gender)) +
+  geom_boxplot(color="red", outlier.colour = "red", outlier.shape = 22) +
+  theme_light() +
+  scale_fill_brewer(palette="Pastel1") +  
+  geom_jitter(color="black", alpha=0.9) +
+  coord_flip() +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "none") +
+  labs(x = "Anxiety Score", y='Gender', title = "The Correlation Between Anxiety Scores and Gender By Marital Status") +
+  facet_wrap(~Marital)
+```
+
+Since marriage is considered a change in life experience, the correlation between `gender` and `total anxiety score` by `marital status` is then tested. According to the plot, it is not surprising that married participants are less likely to experience social anxiety disorder on average. However, it is quite interesting to see that married male participants have similar anxiety scores.
+
+## Age Range 
+```{r, fig.height = 5, fig.width = 10, message=FALSE}
+Age_counted <- revisedSAD %>% count(Age, name = 'count') 
+piechart <- ggplot(Age_counted, aes(x="", y = count, fill=Age)) + 
+  geom_col() +
+  theme_bw() +
+  theme(legend.position="left", plot.title = element_text(hjust = 0.5)) +
+  geom_text(aes(label = count), position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y") +
+  labs(y = "", title="Number of Participants in Each Age Range") +
+  scale_fill_brewer(palette="Dark2")
+
+sampleSize = revisedSAD %>% group_by(Age) %>% summarize(num=n())
+
+violin <- revisedSAD %>%
+  left_join(sampleSize) %>%
+  mutate(axisX = paste0(Age, "\n", "number of samples=", num)) %>%
+  ggplot( aes(x=axisX, y=`Total Anxiety Score`, fill=Age)) +
+  geom_violin() +
+  geom_boxplot(width=0.3, alpha=0.5, fill = "white") +
+  theme_bw() +
+  theme(legend.position="none", plot.title = element_text(hjust = 0.5)) +
+  labs(x = "Age Range",title="The Correlation Between Anxiety Scores and Age Range") +
+  scale_fill_brewer(palette="Dark2")
+
+grid.arrange(piechart, violin, ncol=2)
+```
+The pie chart is used to investigate the number of participants in each age group. By looking at the pie chart, most of the participants are in the 21-30 age range. Only 6 people under 20 years old. However, 6 people still make up nearly 10% of the entire samples. \
+The box plot shows that people in the 31-40 age range have less social anxiety on average than other groups of people. People under age 21-30 have a larger range of anxiety scores, and at least half of them have high scores. People under age 20 not only have a high average total anxiety score, but also have a small standard deviation of its score distribution. Therefore, younger people are more likely to experience social anxiety disorder.
+
+
+## The Usage of Social Media
+```{r, message = FALSE}
+revisedSAD$`Daily Time Spent on Social Media` <- factor(revisedSAD$`Daily Time Spent on Social Media`)
+levels(revisedSAD$`Daily Time Spent on Social Media`) <-c(4,0,1,2,3)
+revisedSAD$`Daily Time Spent on Social Media` <- as.numeric(as.character(revisedSAD$`Daily Time Spent on Social Media`))
+
+ggplot(revisedSAD, aes(x = `Daily Time Spent on Social Media`, y =`Total Anxiety Score`, colour = `Total Anxiety Score`)) + 
+  geom_jitter(shape = 19, size = 2) +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "none") +
+  scale_x_continuous(breaks = 0:4, labels = paste0(c("<1", "1-2", "2-3", "3-4", "4+"))) + 
+  geom_smooth(method='lm', formula= y~x, se = FALSE, col="pink")+
+  labs(title = "The Correlation Between \nTime Spent On Social Media And Total Anxiety Score")
+
+```
+
+The scatter plot shows a positive weak correlation between daily time spend on social media and total anxiety score. Therefore, people who spend more time on social media will more likely experience social anxiety disorder.
+
+# Conclusion and Limitation
+All results in the project agree with the claims in the article. From the bar graph and the box plot that are used to compare gender differences, it is found that there exists no obvious difference between males and females on average total social anxiety score. This result agrees with “social anxiety disorder occurs at the same rate for both men and women” in the article. While examining different age ranges, it is noticed that younger people are more likely to experience social anxiety disorder. This proves that age is a factor that should be considered while determining the possibility of getting social anxiety disorder. Finally, there is a weak positive correlation between daily time spent on social media and the anxiety score, which also shows that time spent on social media is a factor. However, some limitations exist. For example, participants responded to the survey voluntarily, which might cause a voluntary bias. Also, the majority of participants are in the 21-30 age range. It would be better if we can obtain more data using random samples.
