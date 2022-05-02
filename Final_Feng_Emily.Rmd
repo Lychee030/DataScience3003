@@ -1,0 +1,319 @@
+---
+title: "Population Growth and Components of Population Growth"
+author: "Emily Feng (ejf9kwf)"
+date: "Date: Apr 20"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+    code_folding: hide
+  pdf_document:
+    toc: yes
+runtime: shiny
+---
+
+<style>
+h1.title {
+  font-size: 30px;
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 22px;
+}
+h3 { 
+  font-size: 18px;
+}
+blockquote {
+    padding: 10px 20px;
+    margin: 0 0 20px;
+    font-size: 14px;
+    border-left: 5px solid #eee;
+}
+
+</style>
+. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(ggmap)
+library(kableExtra)
+library(data.table)
+library(rworldmap)
+library(RColorBrewer)
+library(gganimate)
+library(shiny)
+library(gifski)
+library(av)
+library(png)
+library(viridis)
+```
+
+# Article
+[Link to the article: "Population Growth and Components of Population Growth"](https://www.publichealthnotes.com/population-growth-and-components-of-population-growth/) \
+When I was in Beijing, China, I was told that the growth in the number of households leads to a growth of housing demand. In addition, people usually say that “you could not even buy a small room with twenty million yuan in Beijing.” As a kid, I thought adults just used these to motivate us to study hard. However, while I was growing up, I realized that overpopulation causes many problems such as housing shortage, environmental issues, and a higher level of competition. Therefore, analyzing the growth rate of the world population is crucial. Future strategies for governments and industries depend on it as well. For example, shrinking population may resolve climate issues and food shortage issues. However, it may cause a decrease in economic growth and a decrease in the labor force. \
+Kusum Wagle published an article titled "Population Growth and Components of Population Growth" on the Public Health Note on 06/13/2021. In this article, Kusum illustrates factors that affect the population size. The three main factors are birth rate, mortality rate, and immigration. And, other factors include government policies, biotic factors, environmental factors...\
+
+**For my project, I would like to understand how populations evolved in different countries. I am also  interested in the primary factors that account for population change. Furthermore, I am curious whether land area is also a potential factor or not.**
+
+
+# Data
+
+[Link to the dataset: "World Population 1960-2018"](https://www.kaggle.com/datasets/imdevskp/world-population-19602018?select=pop_worldometer_data.csv) \
+
+While browsing on Kaggle, I found a dataset named "World Population 1960-2018" that contains the current and past estimated population of countries and dependent territories. All data are from the United Nations Population Division estimates and are collected by the United Nation Statistics Division through annual questionnaires sent to national statistics offices. \
+There are 235 observations along with 11 variables for each observation in this dataset. Each observation represents one unique country/dependent territory. Attribute information for each country are: 
+
+> * Country/Other - Name of countries and dependent territories.
+* Population (2020) - Population in the year 2020
+* Yearly Change - Percentage Yearly Change in Population
+* Net Change - Net Change in Population
+* Density (P/Km²)- Population density (population per square km)
+* Land Area (Km²) - Land area of countries / dependent territories.
+* Migrants (net) - Total number of migrants
+* Fert. Rate - Fertility rate
+* Med. Age - Median age of the population
+* Urban Pop %- Percentage of urban population
+* World Share - Population share
+
+This dataset is useful because it contains information such as the number of migrants. And I believe `Land Area` can be a potential factor that accounts for the change in the population. 
+
+
+```{r echo=TRUE}
+population <- read.csv(file = 'world_population.csv')
+
+# Make the fond size and the whole table smaller
+knitr::kable(head(population)) %>% kable_styling(font_size = 7) 
+```
+
+
+# Data Validation {.tabset}
+
+## Data Revision
+```{r echo=TRUE}
+# Drop unneeded variables such as Med.Age, Urban Pop...
+population <- population[-c(5,9:11)]
+
+# Modify variable names
+colnames(population) <- c("name", "population_size", "yearly_change(%)", "net_change","land_area","migrants","fertility_rate")
+
+knitr::kable(head(population)) %>% kable_styling(font_size = 7)
+```
+
+## Data Type
+```{r echo=TRUE}
+# Display the type of each column variable by using `sapply` function
+knitr::kable(sapply(population, typeof),col.names = c("variable type"))
+```
+R can convert between integer type variables and double type variables for mathematical purposes.
+
+## Valid Range
+```{r echo=TRUE, class.source='fold-show'}
+summary(population$population_size)
+summary(population$land_area)
+
+population[which(population$land_area==30),] # Find the country with the smallest area
+```
+According to summaries of both `population_size` and `land_area`, there are no negative values in these two columns. The minimum `land_area` is 30 square kilometers. By using `which` function, it is found that 30 square kilometers is Macao's surface area.
+
+## Duplicates
+```{r echo=TRUE}
+print(paste("Number of duplicates: ", anyDuplicated(population)))
+```
+
+## Inconsistent Values
+```{r echo=TRUE}
+if(is.na(population) || 'NaN' %in% population || '' %in% population){
+  print("There are inconsistent values (NA, NaN, '') in the dataset.")
+}else{
+  print("There are no inconsistent values (NA, NaN, '') in the dataset.")
+}
+```
+
+# Plot 
+
+## Population Size by Countries
+### Question
+What do you think is the most populated country in 2020?
+
+### Map
+```{r echo=TRUE}
+numCats <- 100
+
+# Joins my data referenced by country names to an internal map
+joinData <- joinCountryData2Map( population,
+                                 joinCode = "NAME",
+                                 nameJoinColumn = "name")
+
+# `numCats` is the number of categories to put the data in
+# `catMethod` controls the method for categorization of data
+# By using `numCats` and `catMethod` together, I am able to get a smooth color transition
+# In addition, each color has a fixed width
+population_map <- mapCountryData(joinData, nameColumnToPlot="population_size", 
+                                 catMethod="fixedWidth",
+                                 numCats = numCats,colourPalette = "heat",
+                                 mapTitle = "Population Size by Countries",
+                                 missingCountryCol = 'grey',addLegend=FALSE)
+
+# do.call() executes addMapLegend() function and a list of arguments to specify the location and the size of the map legend.
+do.call(addMapLegend, c(population_map, horizontal=TRUE, legendWidth=0.5))
+```
+
+```{r echo=TRUE}
+# print the name of top six most populous countries
+head(population[order(-population$population_size),])$name
+```
+
+According to the world map drawn based on country populations, the top six most populous countries are China, India, United States, Indonesia, Pakistan, and Brazil. \
+
+## Annual Population Growth Rate by Countries
+```{r echo=TRUE}
+colourPalette <- viridis::turbo(256)
+# `numCats` is the number of categories to put the data in
+# `catMethod` controls the method for categorization of data
+yearly_change_map <- mapCountryData( joinData,
+                                     nameColumnToPlot="yearly_change(%)", 
+                                     catMethod="fixedWidth",
+                                     numCats = numCats, 
+                                     colourPalette = colourPalette, 
+                                     mapTitle="Annual Population Growth Rate by Countries",
+                                     missingCountryCol = 'grey',
+                                     addLegend=FALSE)
+
+# do.call() executes addMapLegend() function and a list of arguments to specify the location and the size of the map legend.
+do.call(addMapLegend ,c(yearly_change_map, horizontal=TRUE, legendWidth=0.5))
+```
+
+```{r echo=TRUE}
+# print names of the top six countries with the highest yearly change rate
+head(population[order(-population$`yearly_change(%)`),])$name
+```
+
+Based on the "Yearly Change in Population" graph, the top six countries with the highest yearly change rate in population are Niger, Bahrain, Equatorial Guinea, Uganda, Angola, and DR Congo. In addition, most of the countries with high yearly change rates are in Africa. \
+I am surprised by this result. None of these countries are listed in the top six most populous countries. I then recognize that only analyzing annual population growth rate during a specific period may not be accurate because countries have different population sizes. Thus, population growth is calculated to find the total number of people in the next section. \
+Notes: the color palette I chose is `Turbo` from the `viridis` library. This color palette is appropriate for this map because it assigns blue colors to negative values and red colors to positive values. \
+
+### Net Changes in Population Size 
+```{r echo=TRUE}
+# net change in population = yearly change / 100 * population size  
+change_in_population_size <- population$`yearly_change(%)` * population$population_size /100
+
+print(paste("Net changes in world population: ",
+            round(sum(change_in_population_size),0)))
+```
+
+Based on the result, it is found that the global population has grown by ~ 82 million people.\
+
+## Potential Factors {.tabset}
+
+### Land Area
+
+```{r echo=TRUE}
+# Create two objects for storing reactive values for zooming purposes
+ranges <- reactiveValues(x_range = NULL, y_range = NULL)
+
+server <- function(input, output){
+    output$land_area_plot <- renderPlot({
+      ggplot(population, aes(x=land_area, y=population_size)) + 
+        geom_point() + 
+        geom_smooth(method="loess", formula=y~x, se=TRUE, span=input$span) +
+        # Set limits on the coordinate system in order to zoom the plot
+        coord_cartesian(xlim = ranges$x_range, 
+                        ylim = ranges$y_range, expand = FALSE) + 
+        xlab("land area (km^2)") + ylab("population size")
+    })
+    
+    observeEvent(input$plot_dblclick, {
+      # Change values of reactive objects based on input values
+      zoom <- input$plot_zoom
+      if (!is.null(zoom)) {
+        ranges$x_range <- c(zoom$xmin, zoom$xmax)
+        ranges$y_range <- c(zoom$ymin, zoom$ymax)
+      } else {
+        ranges$x_range <- NULL
+        ranges$y_range <- NULL
+      }
+    })
+    
+}
+
+ui <- fluidPage(
+  # SidebarLayout for span adjustment
+  sidebarLayout(
+    sidebarPanel( 
+      sliderInput("span", label = "span adjustment:",
+              min = 0.2, max = 0.9, value = 0.7, step = 0.1)
+    ),
+    mainPanel(
+      # dblclick event fires after two clicks 
+      # brush allows users to draw a rectangle area in the plotting area
+      plotOutput("land_area_plot", dblclick = "plot_dblclick",
+                brush = brushOpts(id = "plot_zoom", resetOnNew = TRUE))
+    )
+  )
+)
+
+shinyApp(ui = ui, server = server) 
+
+```
+
+> `span` controls the amount of smoothing for the default loess smoother. Smaller numbers produce wigglier lines, larger numbers produce smoother lines.
+
+In general, `land_use` and `population_size` have a positive correlation. This result agrees with my hypothesis because, with a large `land_area`, more land can be used for agriculture activities.\
+
+
+### Fertility Rate
+```{r echo=TRUE}
+inputPanel(
+  selectInput(inputId = "SetY", label = strong("Set Limit on Y-axis"),
+              choices = c("y-axis limit = 1,500,000,000", 
+                          "y-axis limit = 350,000,000"))
+)
+
+renderPlot({
+  fp <- ggplot(population, aes(x = fertility_rate, y=population_size)) +
+      geom_point(aes(colour=name),show.legend = FALSE) + 
+      scale_x_continuous(breaks = seq(0,8,by=0.5)) +
+      geom_smooth(method="loess", formula=y~x, se=FALSE)+ 
+      xlab("fertility rate (%)") + ylab("population size")
+    
+    # Scale the y-axis based on the input value
+    if (input$SetY == "y-axis limit = 1,500,000,000"){ 
+      fp <- fp +ylim(0,1500000000)
+    }else if(input$SetY == "y-axis limit = 350,000,000"){
+      fp <- fp +ylim(0,350000000)
+    }
+    
+    fp
+})
+```
+
+Fertility rate is listed as a main variable that accounts for the change in population in the article. However, based on my dataset, I found no obvious correlation between `fertility_rate` and `populaiton_size`. There is only a weak positive correlation. \
+Analyzing the fertility rate is important. In my Economics course, my professor has mentioned that our fertility rate is decreasing because less young Americans are willing to have a child. If the fertility rate falls below the replacement level, then the population will shrink, and the economic growth will be slower. \
+
+
+### Number of Migrants
+```{r echo=TRUE, warning=FALSE}
+ggplot(population, aes(x = migrants, y=population_size, colour = name)) +
+  geom_point(show.legend = FALSE) +
+  scale_color_viridis_d() +
+  transition_reveal(population$migrants) + # reveal data along with `migrants`
+  xlim(-25000,25000) + ylim(0,250000000) +
+  xlab("number of migrants")
+```
+
+Number of migrants will definitely affect the population size. That’s why some countries implement immigration policies to control their population growth. \
+
+
+# Conclusion
+
+According to my plots, land area is a factor that affects the population size. However, the impact of fertility rate is not as significant as what Kusum states in the article. This is probably because I should consider mortality rate while analyzing fertility rate. However, mortality rates are not recorded in the chosen dataset. \
+I have many friends who sometimes discuss how hard it is to get a job. I have also seen lots of news on couples who don't want kids. With a low fertility rate, a more pronounced aging population, and multiple immigration restrictions, I believe there will be a stagnation in population growth. In addition, due to COVID-19 pandemic, more people are brought to death. \
+My dataset is not comprehensive because some countries are not included. To predict population growth more accurately, I may need to find a more detailed and more authoritative dataset. \
+
+
+
+
